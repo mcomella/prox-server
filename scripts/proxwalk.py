@@ -26,11 +26,11 @@ from config import FIREBASE_CONFIG
 from scripts import places_missing_provider_data as missing_data
 import pyrebase
 
-_CROSSWALK_PATH = _tablePrefix + 'crosswalk/'
+_PROXWALK_PATH = _tablePrefix + 'proxwalk/'
 
 _firebase = pyrebase.initialize_app(FIREBASE_CONFIG)
 
-CROSSWALK_KEYS = {
+PROXWALK_KEYS = {
     'tripadvisor',
     'website',
     'wikipedia',
@@ -40,7 +40,7 @@ CROSSWALK_KEYS = {
 _YELP_ID_TO_PLACE_CACHE = {}
 
 
-def _get_crosswalk_db(): return _firebase.database().child(_CROSSWALK_PATH)
+def _get_proxwalk_db(): return _firebase.database().child(_PROXWALK_PATH)
 
 
 def _yelp_id_to_tripadvisor(yelp_id):
@@ -108,39 +108,39 @@ def yelp_ids_to_tripadvisor_ids(yelp_ids):
     return _get_yelp_to_ta_map_from_raw_ta(raw_ta)
 
 
-def _write_crosswalk_to_db(yelp_id, provider_map):
-    """Ensure the given crosswalk object is valid and writes it to the DB.
+def _write_proxwalk_to_db(yelp_id, provider_map):
+    """Ensure the given proxwalk object is valid and writes it to the DB.
     Data existing at the given keys will be overwritten.
 
     :param yelp_id: for the place
     :param provider_map: is {'tripadvisor': <id-str>, ...}
     """
     # Assert 1) no typos, 2) we haven't added keys that this code may not know how to handle.
-    for key in provider_map: assert key in CROSSWALK_KEYS
-    _get_crosswalk_db().child(yelp_id).update(provider_map)
+    for key in provider_map: assert key in PROXWALK_KEYS
+    _get_proxwalk_db().child(yelp_id).update(provider_map)
 
 
 def write_to_db(yelp_to_ta=None, yelp_to_wiki=None, yelp_to_website=None):
-    """Takes yelp_id to other provider ID dicts and writes those values into the crosswalk DB.
+    """Takes yelp_id to other provider ID dicts and writes those values into the proxwalk DB.
     Existing data for a given (yelp_id, other_id) pair will be overwritten.
 
     :param yelp_to_ta: {<yelp_id>: <ta_id>, ...}; output of `yelp_ids_to_tripadvisor_ids`
     """
-    crosswalk = {}  # Bound in fn below.
+    proxwalk = {}  # Bound in fn below.
 
     def add_ids_to_dict(provider_key, yelp_to_other_id):
         if not yelp_to_other_id: return
         for yelp_id, other_id in yelp_to_other_id.iteritems():
-            val = crosswalk.get(yelp_id, {})
+            val = proxwalk.get(yelp_id, {})
             val[provider_key] = other_id
-            crosswalk[yelp_id] = val
+            proxwalk[yelp_id] = val
 
     add_ids_to_dict('tripadvisor', yelp_to_ta)
     add_ids_to_dict('wikipedia', yelp_to_wiki)
     add_ids_to_dict('website', yelp_to_website)
 
-    for yelp_id, provider_map in crosswalk.iteritems():
-        _write_crosswalk_to_db(yelp_id, provider_map)
+    for yelp_id, provider_map in proxwalk.iteritems():
+        _write_proxwalk_to_db(yelp_id, provider_map)
 
 
 def verify_yelp_ids_to_tripadvisor_ids(yelp_ids):
